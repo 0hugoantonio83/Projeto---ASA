@@ -1,0 +1,62 @@
+---
+- name: Instala e configura LVM com VG dados e LV ifpb
+  hosts: all
+  become: yes
+
+  vars:
+    lvm_disks:
+      - /dev/sdb
+      - /dev/sdc
+      - /dev/sdd
+    vg_name: dados
+    lv_name: ifpb
+    lv_size: 15G
+    mount_point: /dados
+
+  tasks:
+
+    - name: Criar partição LVM em cada disco
+      ansible.builtin.parted:
+        device: "{{ item }}"
+        label: gpt
+        number: 1
+        state: present
+        part_type: primary
+        flags: [ lvm ]
+      loop: "{{ lvm_disks }}"
+
+    - name: Criar Physical Volumes (PV)
+      community.general.lvm_pv:
+        pvs: "{{ item }}1"
+        state: present
+      loop: "{{ lvm_disks }}"
+
+    - name: Criar Volume Group (VG) dados
+      community.general.lvg:
+        vg: "{{ vg_name }}"
+        pvs: "{{ lvm_disks | map('regex_replace', '$', '1') | list }}"
+        state: present
+
+    - name: Criar Logical Volume ifpb
+      community.general.lvol:
+        vg: "{{ vg_name }}"
+        lv: "{{ lv_name }}"
+        size: "{{ lv_size }}"
+        state: present
+
+    - name: Criar sistema de arquivos ext4 no LV ifpb
+      ansible.builtin.filesystem:
+        fstype: ext4
+        dev: "/dev/{{ vg_name }}/{{ lv_name }}"
+
+    - name: Criar diretório de montagem /dados
+      ansible.builtin.file:
+        path: "{{ mount_point }}"
+        state: directory
+
+    - name: Configurar montagem automática no fstab
+      ansible.builtin.mount:
+        path: "{{ mount_point }}"
+        src: "/dev/{{ vg_name }}/{{ lv_name }}"
+        fstype: ext4
+        state: mounted
