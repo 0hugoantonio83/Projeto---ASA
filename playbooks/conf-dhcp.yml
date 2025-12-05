@@ -41,5 +41,5 @@
         dest: "/etc/default/{{dhcp_name_serv[ansible_os_family]}}"
         regexp: "^INTERFACESv4"
         line: 'INTERFACESv4="eth1"'
-      state: present
-    notify: restart dhcp
+        state: present
+      notify: restart dhcp
