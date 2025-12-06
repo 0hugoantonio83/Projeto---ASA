@@ -147,7 +147,7 @@
         - { regexp: '^#?PasswordAuthentication', line: 'PasswordAuthentication no' }
         - { regexp: '^#?ChallengeResponseAuthentication', line: 'ChallengeResponseAuthentication no' }
         - { regexp: '^#?Banner', line: 'Banner /etc/ssh/banner_msg' }
-        - { regexp: '^#?UsePAM', line: 'UsePAM yes' } # Necessário para o Banner aparecer em alguns sistemas
+        - { regexp: '^#?UsePAM', line: 'UsePAM yes' }
       notify: Reiniciar SSH
 
     - name: Restringir acesso apenas aos grupos vagrant e ifpb
