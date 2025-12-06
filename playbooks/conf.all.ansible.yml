@@ -1,0 +1,187 @@
+---
+- name: Atualização Geral dos Servidores
+  hosts: all
+  become: true  # Para ativar o modo 'sudo' para todas as tarefas
+  tasks:
+
+    - name: Atualizar o cache do repositório (sudo apt update)
+      ansible.builtin.apt:
+        update_cache: yes
+        cache_valid_time: 3600 #  Não rodar novamente se já foi atualizado na última hora
+
+    - name: Atualizar pacotes instalados (sudo apt upgrade)
+      ansible.builtin.apt:
+        upgrade: dist
+        autoremove: yes
+
+---
+- name: Instalar e Configurar NTP (Chrony)
+  hosts: all
+  become: true
+  tasks:
+
+    - name: Definir fuso horário para America/Recife
+      community.general.timezone:
+        name: America/Recife
+
+    - name: Instalar o chrony
+      ansible.builtin.apt:
+        name: chrony
+        state: present
+        update_cache: yes
+
+    - name: Configurar o chrony.conf com pool.ntp.br
+      ansible.builtin.copy:
+        dest: /etc/chrony/chrony.conf
+        owner: root
+        group: root
+        mode: '0644'
+        content: |
+          # Servidores NTP.br
+          server 0.br.pool.ntp.org iburst
+          server 1.br.pool.ntp.org iburst
+          server 2.br.pool.ntp.org iburst
+          server 3.br.pool.ntp.org iburst
+
+          # Salvando o relógio
+          driftfile /var/lib/chrony/chrony.drift
+
+          # Ajustar o relógio se o desvio for < 1 seg, com excessao das 3 primeiras
+          makestep 1.0 3
+
+          # Diretório de logs
+          logdir /var/log/chrony
+      notify: Reiniciar chrony
+
+    - name: Garantir que o serviço chrony esteja rodando e habilitado
+      ansible.builtin.service:
+        name: chrony
+        state: started
+        enabled: yes
+
+  handlers:
+    - name: Reiniciar chrony
+      ansible.builtin.service:
+        name: chrony
+        state: restarted
+
+---
+- name: Gerenciamento de Usuários e Grupos
+  hosts: all
+  become: true
+  tasks:
+
+    - name: Criar o grupo 'ifpb'
+      ansible.builtin.group:
+        name: ifpb
+        state: present
+
+    - name: Criar usuários e adicionar ao grupo 'ifpb'
+      ansible.builtin.user:
+        name: "{{ item }}"
+        groups: ifpb
+        append: yes       # Adiciona ao grupo
+        shell: /bin/bash
+        create_home: yes  # criação da pasta /home/usuario
+        state: present
+      loop:
+        - evandi
+        - hugo
+
+---
+- name: Configuração do Servidor SSH
+  hosts: all
+  become: true
+  tasks:
+
+    # Mensagem de Saudação
+    - name: Criar arquivo de mensagem SSH
+      ansible.builtin.copy:
+        dest: /etc/ssh/banner_msg
+        content: |
+          *****************************************************************
+          * Acesso apenas para pessoas com autorização expressa!!!   *
+          *****************************************************************
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Gerar chaves SSH para evandi e hugo
+      ansible.builtin.user:
+        name: "{{ item }}"
+        generate_ssh_key: yes
+        ssh_key_bits: 2048
+        ssh_key_file: .ssh/id_rsa
+      loop:
+        - evandi
+        - hugo
+
+    - name: Autorizar a chaves
+      ansible.builtin.shell:
+        cmd: "cat /home/{{ item }}/.ssh/id_rsa.pub >> /home/{{ item }}/.ssh/authorized_keys"
+        creates: "/home/{{ item }}/.ssh/authorized_keys" # Caso não exista o arquivo
+      loop:
+        - evandi
+        - hugo
+
+    - name: Ajustar permissões do authorized_keys
+      ansible.builtin.file:
+        path: "/home/{{ item }}/.ssh/authorized_keys"
+        owner: "{{ item }}"
+        group: ifpb
+        mode: '0600'
+      loop:
+        - evandi
+        - hugo
+
+    # Configurar o sshd_config
+    - name: Configurar sshd_config (Bloquear Root, Senhas e Definir Mensagem de Saudação)
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: "{{ item.regexp }}"
+        line: "{{ item.line }}"
+        state: present
+        validate: 'sshd -t -f %s'
+      loop:
+        - { regexp: '^#?PermitRootLogin', line: 'PermitRootLogin no' }
+        - { regexp: '^#?PasswordAuthentication', line: 'PasswordAuthentication no' }
+        - { regexp: '^#?ChallengeResponseAuthentication', line: 'ChallengeResponseAuthentication no' }
+        - { regexp: '^#?Banner', line: 'Banner /etc/ssh/banner_msg' }
+        - { regexp: '^#?UsePAM', line: 'UsePAM yes' } # Necessário para o Banner aparecer em alguns sistemas
+      notify: Reiniciar SSH
+
+    - name: Restringir acesso apenas aos grupos vagrant e ifpb
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^AllowGroups'
+        line: 'AllowGroups vagrant ifpb'
+        state: present
+        validate: 'sshd -t -f %s'
+      notify: Reiniciar SSH
+
+  handlers:
+    - name: Reiniciar SSH
+      ansible.builtin.service:
+        name: sshd
+        state: restarted
+
+---
+- name: Configurações do NFS e Sudoers
+  hosts: all
+  become: true
+  tasks:
+
+    - name: Instalar o cliente NFS (nfs-common)
+      ansible.builtin.apt:
+        name: nfs-common
+        state: present
+        update_cache: yes
+
+    - name: Permitir que o grupo 'ifpb' use sudo
+      ansible.builtin.copy:
+        dest: /etc/sudoers.d/ifpb_sudo
+        content: "%ifpb ALL=(ALL:ALL) NOPASSWD: ALL"
+        owner: root
+        group: root
+        mode: '0440'
+        validate: 'visudo -cf %s' # Verificar o comando antes de aplicar para não quebrar o sudo
