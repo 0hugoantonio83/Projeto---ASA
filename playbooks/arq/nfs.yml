@@ -1,0 +1,46 @@
+---
+- name: Instala e configura Servidor NFS
+  hosts: all
+  become: yes
+
+  vars:
+    nfs_share_path: "/dados/nfs"
+    nfs_network: "192.168.56.0/24"
+    nfs_user: "nfs-ifpb"
+
+  tasks:
+    - name: Instalar pacote do servidor NFS
+      ansible.builtin.apt:
+        name: nfs-kernel-server
+        state: present
+        update_cache: yes
+
+    - name: Criar usuário nfs-ifpb sem shell
+      ansible.builtin.user:
+        name: "{{ nfs_user }}"
+        shell: /usr/sbin/nologin   # Remove o shell
+        create_home: no            # remove o Home ja que não vai ser necessário
+        state: present
+      register: user_info          # Registra os dados seram usandos depois
+
+    - name: Criar diretório de compartilhamento NFS
+      ansible.builtin.file:
+        path: "{{ nfs_share_path }}"
+        state: directory
+        owner: "{{ nfs_user }}"
+        group: "{{ nfs_user }}"
+        mode: '0755'
+
+    - name: Configurar exports com mapeamento e sync forçado
+      ansible.builtin.lineinfile:
+        path: /etc/exports
+        line: "{{ nfs_share_path }} {{ nfs_network }}(rw,sync,all_squash,anonuid={{ user_info.uid }},anongid={{ user_info.group }})"
+        regexp: "^{{ nfs_share_path }}"
+        state: present
+      notify: Reiniciar NFS
+
+  handlers:
+    - name: Reiniciar NFS
+      ansible.builtin.service:
+        name: nfs-kernel-server
+        state: restarted
