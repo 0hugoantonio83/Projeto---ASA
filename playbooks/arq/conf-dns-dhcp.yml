@@ -1,0 +1,102 @@
+---
+- name: Instalar e Configurar DNS e DHCP com Detecção Automática de Interface
+  hosts: dns_dhcp_servers
+  become: yes
+  vars:
+    bind_conf_dir: "/etc/bind"
+    dhcp_conf_dir: "/etc/dhcp"
+    target_subnet_prefix: "192.168.56"
+
+  tasks:
+
+    - name: Detectar qual interface de rede está na subnet {{ target_subnet_prefix }}
+      set_fact:
+        dhcp_interface: "{{ item }}"
+      loop: "{{ ansible_interfaces }}"
+      when: 
+        - hostvars[inventory_hostname]['ansible_' + item]['ipv4'] is defined
+        - hostvars[inventory_hostname]['ansible_' + item]['ipv4']['address'] | startswith(target_subnet_prefix)
+
+    - name: Falhar se nenhuma interface for encontrada
+      fail:
+        msg: "ERRO: Nenhuma interface de rede encontrada na faixa {{ target_subnet_prefix }}.x"
+      when: dhcp_interface is not defined
+
+     # instalando o dhcp e dns
+    - name: Atualizar cache e instalar pacotes (BIND9 e DHCP)
+      apt:
+        name:
+          - bind9
+          - bind9utils
+          - bind9-doc
+          - isc-dhcp-server
+        state: present
+        update_cache: yes
+
+    # Configuração do DNS (BIND9)
+    - name: Copiar named.conf.options
+      copy:
+        src: playbooks/arq/named.conf.options
+        dest: "{{ bind_conf_dir }}/named.conf.options"
+        owner: root
+        group: bind
+        mode: '0644'
+      notify: Reiniciar BIND9
+
+    - name: Copiar definição de zonas internas
+      copy:
+        src: playbooks/arq/named.conf.internal-zones
+        dest: "{{ bind_conf_dir }}/named.conf.internal-zones"
+        owner: root
+        group: bind
+        mode: '0644'
+      notify: Reiniciar BIND9
+
+    - name: Incluir zonas internas no named.conf.local
+      lineinfile:
+        path: "{{ bind_conf_dir }}/named.conf.local"
+        line: 'include "{{ bind_conf_dir }}/named.conf.internal-zones";'
+        state: present
+      notify: Reiniciar BIND9
+
+    - name: Copiar arquivos de zona (DBs)
+      copy:
+        src: "playbooks/arq/{{ item }}"
+        dest: "{{ bind_conf_dir }}/{{ item }}"
+        owner: root
+        group: bind
+        mode: '0644'
+      loop:
+        - evandi.hugo.devops.db
+        - 56.168.192.db
+      notify: Reiniciar BIND9
+
+    # Configuração do DHCP
+    - name: Copiar dhcpd.conf
+      copy:
+        src: playbooks/arq/dhcpd.conf
+        dest: "{{ dhcp_conf_dir }}/dhcpd.conf"
+        owner: root
+        group: root
+        mode: '0644'
+      notify: Reiniciar DHCP
+
+    - name: Configurar interface de escuta do DHCP (Automático)
+      lineinfile:
+        path: /etc/default/isc-dhcp-server
+        regexp: '^INTERFACESv4='
+        line: 'INTERFACESv4="{{ dhcp_interface }}"'
+      notify: Reiniciar DHCP
+
+  handlers:
+    - name: Reiniciar BIND9
+      service:
+        name: named
+        state: restarted
+        enabled: yes
+
+    - name: Reiniciar DHCP
+      service:
+        name: isc-dhcp-server
+        state: restarted
+        enabled: yes
