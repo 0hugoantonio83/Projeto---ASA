@@ -1,0 +1,5 @@
+---
+# Executores para o Servidor de Aplicação
+
+- import_playbook: app-config.yml
+- import_playbook: conf.all.ansible.yml

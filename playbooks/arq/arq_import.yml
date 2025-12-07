@@ -1,0 +1,7 @@
+---
+# Executores para o Servidor ARQ
+
+- import_playbook: conf.all.ansible.yml
+- import_playbook: lvm.conf.yml
+- import_playbook: nfs.yml
+- import_playbook: conf-dns-dhcp.yml

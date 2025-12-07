@@ -1,0 +1,5 @@
+---
+# Executores para o Banco de Dados
+
+- import_playbook: db-config.yml
+- import_playbook: conf.all.ansible.yml
