@@ -14,9 +14,7 @@
     
     # Configurações do NFS/Autofs
     nfs_server_host: "arq" 
-    # Caminho remoto definido no seu arquivo nfs.yml
     nfs_remote_path: "/dados/nfs"
-    # Caminho local onde será montado
     nfs_local_mount: "/var/nfs"
 
   tasks:
@@ -75,7 +73,7 @@
         state: present
 
     - name: Configurar o Master Map do Autofs
-      # # Adiciona a referência para o nosso arquivo de mapeamento direto
+      # Adiciona a referência para o nosso arquivo de mapeamento direto
       ansible.builtin.lineinfile:
         path: /etc/auto.master
         line: "/- /etc/auto.direct"
