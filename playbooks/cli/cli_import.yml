@@ -1,5 +1,5 @@
 ---
 # Executores para o Cliente
 
-- import_playbook: cli-config.yml
 - import_playbook: conf.all.ansible.yml
+- import_playbook: cli-config.yml
