@@ -1,0 +1,74 @@
+---
+- name: Configurar Host Cliente (CLI) e Autofs
+  hosts: cli
+  become: yes
+  tasks:
+
+  vars:
+    # Configurações NFS/Autofs
+    nfs_server_host: "arq" 
+    nfs_remote_path: "/dados/nfs"
+    nfs_local_mount: "/var/nfs"
+
+  tasks:    
+    # Instalação dos pacotes
+    - name: Atualizar cache do apt e instalar pacotes necessários
+      apt:
+        name:
+          - firefox-esr
+          - xauth
+        state: present
+        update_cache: yes
+
+    - name: Configurar SSH para permitir X11Forwarding
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?X11Forwarding'
+        line: 'X11Forwarding yes'
+        state: present
+        validate: 'sshd -t -f %s'
+      notify: Reiniciar serviço SSH
+
+    - name: Garantir que X11DisplayOffset está configurado
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?X11DisplayOffset'
+        line: 'X11DisplayOffset 10'
+        state: present
+      notify: Reiniciar serviço SSH
+
+    # Instalação e Configuração do Autofs
+    - name: Instalar Autofs e dependências
+      ansible.builtin.apt:
+        name:
+          - autofs
+          - nfs-common  # Necessário para montar nfs
+        state: present
+
+    - name: Configurar o Master Map do Autofs
+      # Adiciona a referência para o nosso arquivo de mapeamento direto
+      ansible.builtin.lineinfile:
+        path: /etc/auto.master
+        line: "/- /etc/auto.direct"
+        state: present
+      notify: Reiniciar Autofs
+
+    - name: Criar o arquivo de mapeamento direto (auto.direct)
+      # Define o mapeamento: /var/nfs - arq:/dados/nfs
+      ansible.builtin.copy:
+        dest: /etc/auto.direct
+        content: |
+          {{ nfs_local_mount }} -fstype=nfs,rw,sync {{ nfs_server_host }}:{{ nfs_remote_path }}
+        mode: '0644'
+      notify: Reiniciar Autofs
+
+  handlers:
+    - name: Reiniciar serviço SSH
+      service:
+        name: ssh
+        state: restarted
+
+    - name: Reiniciar Autofs
+      ansible.builtin.service:
+        name: autofs
+        state: restarted
