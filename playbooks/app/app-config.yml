@@ -1,0 +1,103 @@
+---
+- name: Configura Servidor de Aplicação (App)
+  hosts: app
+  become: yes
+
+  vars:
+    # Configurações do Projeto (Apache)
+    projeto_descricao: "Foram criadas VMs Vagrant arq, db, app e cliente para configuração automática do sistema e serviços utilizando os recursos do ansible para uma estrutura virtual."
+    equipe:
+      - nome: "Evandi Francisco"
+        matricula: "20241380038"
+      - nome: "Hugo Antônio"
+        matricula: "20241380001"
+    
+    # Configurações do NFS/Autofs
+    nfs_server_host: "arq" 
+    # Caminho remoto definido no seu arquivo nfs.yml
+    nfs_remote_path: "/dados/nfs"
+    # Caminho local onde será montado
+    nfs_local_mount: "/var/nfs"
+
+  tasks:
+    # Instalação e Configuração do Apache
+    - name: Instalar Apache2
+      ansible.builtin.apt:
+        name: apache2
+        state: present
+        update_cache: yes
+
+    - name: Criar e configurar arquivo index.html
+      ansible.builtin.copy:
+        dest: /var/www/html/index.html
+        content: |
+          <!DOCTYPE html>
+          <html lang="pt-br">
+          <head>
+              <meta charset="UTF-8">
+              <title>Projeto de Administração de Sistemas Abertos</title>
+              <style>
+                  body { font-family: Arial, sans-serif; margin: 40px; }
+                  table { border-collapse: collapse; width: 50%; }
+                  th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                  th { background-color: #f2f2f2; }
+                  .header { background-color: #4CAF50; color: white; padding: 10px; }
+              </style>
+          </head>
+          <body>
+              <div class="header">
+                  <h1>{{ projeto_descricao }}</h1>
+              </div>
+              <h2>Integrantes da Equipe</h2>
+              <table>
+                  <tr>
+                      <th>Nome</th>
+                      <th>Matrícula</th>
+                  </tr>
+                  {% for membro in equipe %}
+                  <tr>
+                      <td>{{ membro.nome }}</td>
+                      <td>{{ membro.matricula }}</td>
+                  </tr>
+                  {% endfor %}
+              </table>
+          </body>
+          </html>
+        mode: '0644'
+      notify: Reiniciar Apache
+
+    # Instalação e Configuração do Autofs
+    - name: Instalar Autofs e utilitários NFS
+      ansible.builtin.apt:
+        name: 
+          - autofs
+          - nfs-common  # Necessário para montar nfs
+        state: present
+
+    - name: Configurar o Master Map do Autofs
+      # # Adiciona a referência para o nosso arquivo de mapeamento direto
+      ansible.builtin.lineinfile:
+        path: /etc/auto.master
+        line: "/- /etc/auto.nfs_direct"
+        state: present
+      notify: Reiniciar Autofs
+
+    - name: Criar arquivo de mapeamento direto (auto.direct)
+      # Define o mapeamento: /var/nfs - arq:/dados/nfs
+      ansible.builtin.copy:
+        dest: /etc/auto.direct
+        content: |
+          {{ nfs_local_mount }} -fstype=nfs,rw,sync {{ nfs_server_host }}:{{ nfs_remote_path }}
+        mode: '0644'
+      notify: Reiniciar Autofs
+
+  handlers:
+    - name: Reiniciar Apache
+      ansible.builtin.service:
+        name: apache2
+        state: restarted
+
+    - name: Reiniciar Autofs
+      ansible.builtin.service:
+        name: autofs
+        state: restarted
