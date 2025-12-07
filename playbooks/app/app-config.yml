@@ -78,7 +78,7 @@
       # # Adiciona a referência para o nosso arquivo de mapeamento direto
       ansible.builtin.lineinfile:
         path: /etc/auto.master
-        line: "/- /etc/auto.nfs_direct"
+        line: "/- /etc/auto.direct"
         state: present
       notify: Reiniciar Autofs
 
