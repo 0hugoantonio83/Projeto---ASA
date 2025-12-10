@@ -14,12 +14,6 @@
         upgrade: dist
         autoremove: yes
 
----
-- name: Instalar e Configurar NTP (Chrony)
-  hosts: all
-  become: true
-  tasks:
-
     - name: Definir fuso horário para America/Recife
       community.general.timezone:
         name: America/Recife
@@ -59,17 +53,6 @@
         state: started
         enabled: yes
 
-  handlers:
-    - name: Reiniciar chrony
-      ansible.builtin.service:
-        name: chrony
-        state: restarted
-
----
-- name: Gerenciamento de Usuários e Grupos
-  hosts: all
-  become: true
-  tasks:
 
     - name: Criar o grupo 'ifpb'
       ansible.builtin.group:
@@ -88,11 +71,6 @@
         - evandi
         - hugo
 
----
-- name: Configuração do Servidor SSH
-  hosts: all
-  become: true
-  tasks:
 
     # Mensagem de Saudação
     - name: Criar arquivo de mensagem SSH
@@ -159,17 +137,6 @@
         validate: 'sshd -t -f %s'
       notify: Reiniciar SSH
 
-  handlers:
-    - name: Reiniciar SSH
-      ansible.builtin.service:
-        name: sshd
-        state: restarted
-
----
-- name: Configurações do NFS e Sudoers
-  hosts: all
-  become: true
-  tasks:
 
     - name: Instalar o cliente NFS (nfs-common)
       ansible.builtin.apt:
@@ -185,3 +152,19 @@
         group: root
         mode: '0440'
         validate: 'visudo -cf %s' # Verificar o comando antes de aplicar para não quebrar o sudo
+
+  handlers:
+    - name: Reiniciar chrony
+      ansible.builtin.service:
+        name: chrony
+        state: restarted
+
+    - name: Reiniciar SSH
+      ansible.builtin.service:
+        name: sshd
+        state: restarted
+
+    - name: Reiniciar chrony
+      ansible.builtin.service:
+        name: chrony
+        state: restarted
