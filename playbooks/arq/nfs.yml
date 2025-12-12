@@ -1,6 +1,6 @@
 ---
 - name: Instala e configura Servidor NFS
-  hosts: all
+  hosts: arq
   become: yes
 
   vars:

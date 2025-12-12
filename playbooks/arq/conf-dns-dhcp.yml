@@ -1,6 +1,6 @@
 ---
 - name: Instalar e Configurar DNS e DHCP com Detecção Automática de Interface
-  hosts: dns_dhcp_servers
+  hosts: arq
   become: yes
   vars:
     bind_conf_dir: "/etc/bind"
