@@ -9,19 +9,6 @@
 
   tasks:
 
-    - name: Detectar qual interface de rede está na subnet {{ target_subnet_prefix }}
-      set_fact:
-        dhcp_interface: "{{ item }}"
-      loop: "{{ ansible_interfaces }}"
-      when: 
-        - hostvars[inventory_hostname]['ansible_' + item]['ipv4'] is defined
-        - hostvars[inventory_hostname]['ansible_' + item]['ipv4']['address'] | startswith(target_subnet_prefix)
-
-    - name: Falhar se nenhuma interface for encontrada
-      fail:
-        msg: "ERRO: Nenhuma interface de rede encontrada na faixa {{ target_subnet_prefix }}.x"
-      when: dhcp_interface is not defined
-
      # instalando o dhcp e dns
     - name: Atualizar cache e instalar pacotes (BIND9 e DHCP)
       apt:

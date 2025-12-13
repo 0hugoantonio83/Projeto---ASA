@@ -1,62 +1,51 @@
 ---
-- name: Instala e configura LVM com VG dados e LV ifpb
-  hosts: all
-  become: yes
-
+- name: Configuração de LVM conforme requisitos
+  hosts: all  
+  become: true
   vars:
-    lvm_disks:
+    # 3 discos para o VG
+    discos_lvm:
       - /dev/sdb
       - /dev/sdc
       - /dev/sdd
 
   tasks:
-    - name: Instalar o pacote LVM2 (necessário para gerenciar volumes)
+    - name: Instala o pacote LVM2 (necessário para gerenciar volumes)
       package:
         name: lvm2
         state: present
 
-    - name: Criar partição LVM em cada disco
-      ansible.builtin.parted:
-        device: "{{ item }}"
-        label: gpt
-        number: 1
-        state: present
-        part_type: primary
-        flags: [ lvm ]
-      loop: "{{ lvm_disks }}"
-
-    - name: Criar Physical Volumes (PV)
-      community.general.lvm_pv:
-        pvs: "{{ item }}1"
-        state: present
-      loop: "{{ lvm_disks }}"
-
-    - name: Criar Volume Group (VG) dados
+    # Criar um Volume Group (VG) usando 3 discos
+    - name: Cria o Volume Group
       community.general.lvg:
         vg: dados
-        pvs: "{{ lvm_disks | map('regex_replace', '$', '1') | list }}"
+        pvs: "{{ discos_lvm }}"
         state: present
 
-    - name: Criar Logical Volume ifpb
+    # Criar um Logical Volume (LV) de nome ifpb com 15 GB
+    - name: Cria o Logical Volume 'ifpb' com 15GB
       community.general.lvol:
         vg: dados
         lv: ifpb
         size: 15g
         state: present
 
-    - name: Criar sistema de arquivos ext4 no LV ifpb
-      ansible.builtin.filesystem:
+    # Formatar o LV ifpb com o sistema de arquivos ext4
+    - name: Formata a partição ifpb como ext4
+      community.general.filesystem:
         fstype: ext4
         dev: /dev/dados/ifpb
 
-    - name: Criar diretório de montagem /dados
-      ansible.builtin.file:
+    # Cria o diretório antes de montar
+    - name: Cria o diretório de montagem /dados
+      file:
         path: /dados
         state: directory
         mode: '0755'
 
-    - name: Configurar montagem automática no fstab
-      ansible.builtin.mount:
+    # Montagem automatica em /dados ao iniciar
+    - name: Monta o volume em /dados e persiste no fstab
+      ansible.posix.mount:
         path: /dados
         src: /dev/dados/ifpb
         fstype: ext4

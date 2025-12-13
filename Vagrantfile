@@ -6,11 +6,6 @@ Vagrant.configure("2") do |config|
   config.vm.box = "debian/bookworm64"
   config.ssh.insert_key = false
   config.vm.synced_folder ".", "/vagrant", disabled: true
-  config.trigger.before :provision do |t|
-    t.name = "Instalar Dependências do Ansible"
-    t.info = "Instalando a coleção community.general para suporte a LVM..."
-    t.run = { inline: "ansible-galaxy collection install community.general --force" }
-  end
   config.vm.provider :virtualbox do |v|
     v.memory = 512
     v.linked_clone = true

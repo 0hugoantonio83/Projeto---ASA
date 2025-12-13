@@ -76,14 +76,14 @@
       # Adiciona a referência para o nosso arquivo de mapeamento direto
       ansible.builtin.lineinfile:
         path: /etc/auto.master
-        line: "/- /etc/auto.direct"
+        line: "/- /etc/auto.nfs"
         state: present
       notify: Reiniciar Autofs
 
     - name: Criar arquivo de mapeamento direto (auto.direct)
       # Define o mapeamento: /var/nfs - arq:/dados/nfs
       ansible.builtin.copy:
-        dest: /etc/auto.direct
+        dest: /etc/auto.nfs
         content: |
           {{ nfs_local_mount }} -fstype=nfs,rw,sync {{ nfs_server_host }}:{{ nfs_remote_path }}
         mode: '0644'
