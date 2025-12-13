@@ -1,7 +1,7 @@
 ---
 - name: Instalar e Configurar DNS e DHCP com Detecção Automática de Interface
   hosts: all
-  become: yes
+  become: true
   vars:
     bind_conf_dir: "/etc/bind"
     dhcp_conf_dir: "/etc/dhcp"
@@ -26,33 +26,24 @@
         state: started
 
     # Configuração do DNS (BIND9)
-    - name: Copiar named.conf.options
-      copy:
-        src: playbooks/arq/named.conf.options
-        dest: "{{ bind_conf_dir }}/named.conf.options"
-        owner: root
-        group: bind
-        mode: '0644'
-      notify: Reiniciar BIND9
-
     - name: Copia arquivos de configuração do Bind9.
       copy:
         src: "{{ item.src }}"
         dest: "{{ item.dest }}"
         mode: 0664
       loop:
-        - { src: "named.conf.options", dest: "/etc/bind/named.conf.options" }
-        - { src: "named.conf.internal-zones", dest: "/etc/bind/named.conf.internal-zones" }
-        - { src: "evandi.hugo.devops.db", dest: "/etc/bind/evandi.hugo.devops.db" }
-        - { src: "56.168.192.db", dest: "/etc/bind/56.168.192.db" }
-      notify: restart bind
+        - { src: "/playbooks/arq/named.conf.options", dest: "/etc/bind/named.conf.options" }
+        - { src: "/playbooks/arq/named.conf.internal-zones", dest: "/etc/bind/named.conf.internal-zones" }
+        - { src: "/playbooks/arq/evandi.hugo.devops.db", dest: "/etc/bind/evandi.hugo.devops.db" }
+        - { src: "/playbooks/arq/56.168.192.db", dest: "/etc/bind/56.168.192.db" }
+      notify: Reiniciar BIND9
 
     - name: Inclui zonas internas na configuração default do bind9.
       lineinfile:
         dest: "/etc/bind/named.conf"
         line: 'include "/etc/bind/named.conf.internal-zones";'
         state: present
-      notify: restart bind
+      notify: Reiniciar BIND9
 
     # Configuração do DHCP
     - name: Copiar dhcpd.conf
@@ -80,12 +71,10 @@
   handlers:
     - name: Reiniciar BIND9
       service:
-        name: named
+        name: bind9
         state: restarted
-        enabled: yes
 
     - name: Reiniciar DHCP
       service:
         name: isc-dhcp-server
         state: restarted
-        enabled: yes
