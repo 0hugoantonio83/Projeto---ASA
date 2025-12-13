@@ -8,12 +8,12 @@
       - /dev/sdb
       - /dev/sdc
       - /dev/sdd
-    vg_name: dados
-    lv_name: ifpb
-    lv_size: 15G
-    mount_point: /dados
 
   tasks:
+    - name: Instalar o pacote LVM2 (necessário para gerenciar volumes)
+      package:
+        name: lvm2
+        state: present
 
     - name: Criar partição LVM em cada disco
       ansible.builtin.parted:
@@ -33,30 +33,31 @@
 
     - name: Criar Volume Group (VG) dados
       community.general.lvg:
-        vg: "{{ vg_name }}"
+        vg: dados
         pvs: "{{ lvm_disks | map('regex_replace', '$', '1') | list }}"
         state: present
 
     - name: Criar Logical Volume ifpb
       community.general.lvol:
-        vg: "{{ vg_name }}"
-        lv: "{{ lv_name }}"
-        size: "{{ lv_size }}"
+        vg: dados
+        lv: ifpb
+        size: 15g
         state: present
 
     - name: Criar sistema de arquivos ext4 no LV ifpb
       ansible.builtin.filesystem:
         fstype: ext4
-        dev: "/dev/{{ vg_name }}/{{ lv_name }}"
+        dev: /dev/dados/ifpb
 
     - name: Criar diretório de montagem /dados
       ansible.builtin.file:
-        path: "{{ mount_point }}"
+        path: /dados
         state: directory
+        mode: '0755'
 
     - name: Configurar montagem automática no fstab
       ansible.builtin.mount:
-        path: "{{ mount_point }}"
-        src: "/dev/{{ vg_name }}/{{ lv_name }}"
+        path: /dados
+        src: /dev/dados/ifpb
         fstype: ext4
         state: mounted
