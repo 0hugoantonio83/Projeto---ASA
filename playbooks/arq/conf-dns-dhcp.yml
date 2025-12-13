@@ -1,12 +1,11 @@
 ---
 - name: Instalar e Configurar DNS e DHCP com Detecção Automática de Interface
-  hosts: arq
+  hosts: all
   become: yes
   vars:
     bind_conf_dir: "/etc/bind"
     dhcp_conf_dir: "/etc/dhcp"
-    target_subnet_prefix: "192.168.56"
-
+    dhcp_interface: "eth1"
   tasks:
 
      # instalando o dhcp e dns
@@ -17,8 +16,14 @@
           - bind9utils
           - bind9-doc
           - isc-dhcp-server
-        state: present
         update_cache: yes
+        state: present
+
+    - name: Habilita o serviço do bind9 no boot.
+      service:
+        name: bind9
+        enabled: yes
+        state: started
 
     # Configuração do DNS (BIND9)
     - name: Copiar named.conf.options
@@ -30,33 +35,24 @@
         mode: '0644'
       notify: Reiniciar BIND9
 
-    - name: Copiar definição de zonas internas
+    - name: Copia arquivos de configuração do Bind9.
       copy:
-        src: playbooks/arq/named.conf.internal-zones
-        dest: "{{ bind_conf_dir }}/named.conf.internal-zones"
-        owner: root
-        group: bind
-        mode: '0644'
-      notify: Reiniciar BIND9
-
-    - name: Incluir zonas internas no named.conf.local
-      lineinfile:
-        path: "{{ bind_conf_dir }}/named.conf.local"
-        line: 'include "{{ bind_conf_dir }}/named.conf.internal-zones";'
-        state: present
-      notify: Reiniciar BIND9
-
-    - name: Copiar arquivos de zona (DBs)
-      copy:
-        src: "playbooks/arq/{{ item }}"
-        dest: "{{ bind_conf_dir }}/{{ item }}"
-        owner: root
-        group: bind
-        mode: '0644'
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        mode: 0664
       loop:
-        - evandi.hugo.devops.db
-        - 56.168.192.db
-      notify: Reiniciar BIND9
+        - { src: "named.conf.options", dest: "/etc/bind/named.conf.options" }
+        - { src: "named.conf.internal-zones", dest: "/etc/bind/named.conf.internal-zones" }
+        - { src: "evandi.hugo.devops.db", dest: "/etc/bind/evandi.hugo.devops.db" }
+        - { src: "56.168.192.db", dest: "/etc/bind/56.168.192.db" }
+      notify: restart bind
+
+    - name: Inclui zonas internas na configuração default do bind9.
+      lineinfile:
+        dest: "/etc/bind/named.conf"
+        line: 'include "/etc/bind/named.conf.internal-zones";'
+        state: present
+      notify: restart bind
 
     # Configuração do DHCP
     - name: Copiar dhcpd.conf
@@ -74,6 +70,12 @@
         regexp: '^INTERFACESv4='
         line: 'INTERFACESv4="{{ dhcp_interface }}"'
       notify: Reiniciar DHCP
+
+    - name: Habilita e inicia o serviço do dhcp.
+      service:
+        name: isc-dhcp-server
+        enabled: yes
+        state: started
 
   handlers:
     - name: Reiniciar BIND9
