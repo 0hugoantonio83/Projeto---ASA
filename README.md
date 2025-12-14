@@ -54,4 +54,4 @@ Este projeto foi desenvolvido como parte dos requisitos da disciplina de Adminis
 
 * Hugo Antônio - Matrícula: 20241380001
 * Evandi Francisco - Matrícula: 20241380038
-*
+
