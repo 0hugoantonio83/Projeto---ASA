@@ -32,10 +32,10 @@
         dest: "{{ item.dest }}"
         mode: 0664
       loop:
-        - { src: "/playbooks/arq/named.conf.options", dest: "/etc/bind/named.conf.options" }
-        - { src: "/playbooks/arq/named.conf.internal-zones", dest: "/etc/bind/named.conf.internal-zones" }
-        - { src: "/playbooks/arq/evandi.hugo.devops.db", dest: "/etc/bind/evandi.hugo.devops.db" }
-        - { src: "/playbooks/arq/56.168.192.db", dest: "/etc/bind/56.168.192.db" }
+        - { src: "named.conf.options", dest: "/etc/bind/named.conf.options" }
+        - { src: "named.conf.internal-zones", dest: "/etc/bind/named.conf.internal-zones" }
+        - { src: "evandi.hugo.devops.db", dest: "/etc/bind/evandi.hugo.devops.db" }
+        - { src: "56.168.192.db", dest: "/etc/bind/56.168.192.db" }
       notify: Reiniciar BIND9
 
     - name: Inclui zonas internas na configuração default do bind9.
@@ -48,7 +48,7 @@
     # Configuração do DHCP
     - name: Copiar dhcpd.conf
       copy:
-        src: playbooks/arq/dhcpd.conf
+        src: dhcpd.conf
         dest: "{{ dhcp_conf_dir }}/dhcpd.conf"
         owner: root
         group: root
