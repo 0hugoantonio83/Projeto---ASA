@@ -43,7 +43,7 @@ Para executar e testar o ambiente, você precisa ter instalado:
 
 1.  **Git** (para clonar o repositório).
 2.  **VirtualBox**
-3.  **Vagrant**
+3.  **Vagrant** (Utilizar o "sudo" para dar as permissões necessárias)
 4.  **Ansible** (facilita a execução manual de playbooks.)
 
 ---
