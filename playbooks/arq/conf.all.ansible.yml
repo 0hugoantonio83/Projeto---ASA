@@ -88,14 +88,16 @@
       ansible.posix.authorized_key:
         user: "{{ item.name }}"
         state: present
-        key: "{{ item.key }}"
+        # O lookup lê o arquivo na SUA máquina (Host) e envia o conteúdo para a VM
+        key: "{{ lookup('file', item.key_path) }}"
       loop:
-        # Chave extraída do arquivo id_ed25519_evandi.pub
         - name: evandi
-          key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJmRV6Lb7zqlGuI6g03/+GjwAjWiSAxUL5Ds2HASzSC7 evandi@asa"
-        # Chave extraída do arquivo id_ed25519_hugo.pub
+          # Caminho abaixo para a chave do evandi
+          key_path: "~/.ssh/id_ed25519_evandi.pub" 
+        
         - name: hugo
-          key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJmRV6Lb7zqlGuI6g03/+GjwAjWiSAxUL5Ds2HASzSC7 hugo@asa"
+          # Caminho abaixo para a chave do hugo
+          key_path: "~/.ssh/id_ed25519_hugo.pub"
 
     # Configurar o sshd_config
     - name: Configurar sshd_config (Bloquear Root, Senhas e Definir Mensagem de Saudação)
@@ -149,7 +151,3 @@
         name: sshd
         state: restarted
 
-    - name: Reiniciar chrony
-      ansible.builtin.service:
-        name: chrony
-        state: restarted
