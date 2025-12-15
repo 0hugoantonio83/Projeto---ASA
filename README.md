@@ -5,7 +5,7 @@
 Este projeto tem como objetivo principal **simular e automatizar a administração e o provisionamento de uma infraestrutura de múltiplos servidores** utilizando ferramentas de código aberto.
 
 A solução é construída sobre uma estrutura de virtualização usando **Vagrant**, que orquestra a criação de quatro Máquinas Virtuais (VMs) com papéis distintos:
-* `arq` (arquitetura/balanceamento)
+* `arq` (arquivo)
 * `db` (banco de dados)
 * `app` (aplicação)
 * `cliente` (simulação de acesso)
