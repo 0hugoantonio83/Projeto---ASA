@@ -88,7 +88,7 @@
       ansible.posix.authorized_key:
         user: "{{ item.name }}"
         state: present
-        # O lookup lê o arquivo na SUA máquina (Host) e envia o conteúdo para a VM
+        # O lookup lê o arquivo na máquina real e envia o conteúdo para a VM
         key: "{{ lookup('file', item.key_path) }}"
       loop:
         - name: evandi
