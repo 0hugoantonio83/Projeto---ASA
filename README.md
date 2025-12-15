@@ -10,7 +10,7 @@ A solução é construída sobre uma estrutura de virtualização usando **Vagra
 * `app` (aplicação)
 * `cliente` (simulação de acesso)
 
-Toda a configuração e instalação de serviços dentro dessas VMs é realizada de forma automática e idempotente pelo **Ansible**, garantindo um ambiente consistente e replicável.
+Toda a configuração e instalação de serviços dentro dessas VMs é realizada de forma automática pelo **Ansible**, garantindo um ambiente consistente e replicável.
 
 ---
 
