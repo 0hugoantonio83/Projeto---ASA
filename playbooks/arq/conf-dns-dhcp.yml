@@ -45,6 +45,7 @@
         state: present
       notify: Reiniciar BIND9
 
+    
     # Configuração do DHCP
     - name: Copiar dhcpd.conf
       copy:

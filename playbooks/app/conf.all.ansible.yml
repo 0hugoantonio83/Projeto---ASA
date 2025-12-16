@@ -53,7 +53,6 @@
         state: started
         enabled: yes
 
-
     - name: Criar o grupo 'ifpb'
       ansible.builtin.group:
         name: ifpb
