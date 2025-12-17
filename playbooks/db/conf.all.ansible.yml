@@ -92,11 +92,11 @@
       loop:
         - name: evandi
           # Caminho abaixo para a chave do evandi
-          key_path: "/home/' + ansible_env.USER + '/.ssh/id_ed25519_evandi.pub" 
+          key_path: "/home/ifpb/.ssh/id_ed25519_evandi.pub" 
         
         - name: hugo
           # Caminho abaixo para a chave do hugo
-          key_path: "/home/' + ansible_env.USER + '/.ssh/id_ed25519_hugo.pub"
+          key_path: "/home/ifpb/.ssh/id_ed25519_hugo.pub"
 
     # Configurar o sshd_config
     - name: Configurar sshd_config (Bloquear Root, Senhas e Definir Mensagem de Saudação)
